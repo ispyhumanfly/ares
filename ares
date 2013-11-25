@@ -1,0 +1,111 @@
+#!/usr/bin/env perl
+
+use Mojolicious::Lite;
+use Mojo::Util;
+use Mojo::JSON;
+use IO::File;
+
+plugin 'JSONConfig';
+
+use lib 'lib';
+use Model;
+
+
+our $DATA = prepare_documents();
+
+put '/documents' => sub {
+
+    my $self = shift;
+
+    my $json = Mojo::JSON->new;
+
+    my $documents = app->config->{documents}; 
+
+    if (($self->req->params) and ($self->req->body))
+    
+    {
+        my $data     = $json->encode($self->req->body);
+        my $checksum = Mojo::Util->md5_sum($data);
+        my $tags     = $self->req->query_params->to_string;
+
+        unless ($DATA->resultset('Documents')->search({checksum => $checksum})
+            ->all)
+        {
+
+            $DATA->resultset('Documents')->create(
+                {   checksum => $checksum,
+                    tags     => "%$tags%"
+                }
+            );
+
+            my $document = IO::File->new("$documents/$checksum.json", 'w');
+
+            if (defined $document) {
+
+                print $document $data;
+                undef $document;
+            }
+        }
+    }
+};
+
+
+get '/documents' => sub {
+
+    my $self = shift;
+
+    my $json = Mojo::JSON->new;
+
+    my $documents = app->config->{documents}; 
+
+    say $documents;
+
+    my $tags = $self->req->query_params->to_string;
+    
+    #say $tags;
+    
+    my @results = $DATA->resultset('Documents')
+      ->search({tags => "%$tags%"})->all;
+      
+    #say $_->checksum for @results;
+    
+    my @data;
+
+    for (@results)
+
+    {
+        my $document =
+          IO::File->new("$documents/" . $_->checksum . '.json', 'r');
+
+        while (<$document>) {
+            push @data, $_;
+        }
+        
+        undef $document;
+    }
+
+    my $string = "@data";
+    return $self->render(json => $string);
+};
+
+
+sub prepare_documents {
+
+    my $documents = app->config->{documents}; 
+
+    if ($^O =~ /^[linux|darwin]/i)
+
+    {        
+        system "mkdir -p $documents"
+          unless -d $documents;
+
+        system
+          "sqlite3 $documents/documents.db < lib/Model/Result/Documents.sql"
+          unless -e "$documents/documents.db";
+    }
+
+    return Model->connect("dbi:SQLite:$documents/documents.db");
+}
+
+app->secret('I love Ares so much!');
+app->start;

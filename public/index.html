@@ -1,0 +1,35 @@
+<!DOCTYPE HTML>
+<html>
+    <head>
+                
+        <title>Ares</title>
+    
+        <script src="http://js.thoughtpivot.com/dojo/dojo/dojo.js" data-dojo-config="async: true"></script>        
+
+	<script type="text/javascript">//<![CDATA[
+
+            require(["./ares.js", "dojo/json"], function(ARES, JSON) {
+
+                ARES.write(
+                    {
+                        tags : { format : 'json', something : 'foo'}, 
+                        data : {
+			    
+			    'Naasase' : 'Something else',
+			    'Category' : 'ttrewrwerw',
+			    'Contents' : 'Something worth saying.'
+			}
+                    }
+                );
+
+                var data = ARES.read({tags : { kids: 'are awesome', something : 'foo' }});
+		
+		document.write(data);
+		
+            });
+            
+	// ]]></script>
+
+    </head>
+    <body></body>
+</html>
